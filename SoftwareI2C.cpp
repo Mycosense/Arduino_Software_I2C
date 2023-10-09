@@ -63,7 +63,16 @@ void SoftwareI2C::sdaSet(uchar ucDta) {
     Return: none
 *************************************************************************************************/
 void SoftwareI2C::sclSet(uchar ucDta) {
-    digitalWrite(pinScl, ucDta);
+    if(ucDta == HIGH)
+    {
+        pinMode(pinScl, INPUT);
+        while(digitalRead(pinScl) != HIGH); // TODO add timeout
+    }
+    else
+    {
+        digitalWrite(pinScl, LOW);
+        pinMode(pinScl, OUTPUT);
+    }
 }
 
 
