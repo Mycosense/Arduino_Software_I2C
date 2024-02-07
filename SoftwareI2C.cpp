@@ -24,6 +24,8 @@
 
 #include "SoftwareI2C.h"
 
+#define TIMEOUT_SCL_HIGH    1000    // TODO add as parameter
+
 /*************************************************************************************************
     Function Name: begin
     Description:  config IO
@@ -66,7 +68,14 @@ void SoftwareI2C::sclSet(uchar ucDta) {
     if(ucDta == HIGH)
     {
         pinMode(pinScl, INPUT);
-        while(digitalRead(pinScl) != HIGH); // TODO add timeout
+        unsigned long start_time_ms = millis();
+        while(digitalRead(pinScl) != HIGH)
+        {
+            if(millis() - start_time_ms > TIMEOUT_SCL_HIGH)
+            {
+                return; // TODO add return
+            }
+        }
     }
     else
     {
