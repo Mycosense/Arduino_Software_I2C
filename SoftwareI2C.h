@@ -53,12 +53,12 @@ class SoftwareI2C {
   private:
 
     inline void sdaSet(uchar ucDta);
-    inline void sclSet(uchar ucDta);
+    inline uchar sclSet(uchar ucDta);
 
     inline void sendStart(void);
-    inline void sendStop(void);
+    inline uchar sendStop(void);
     inline uchar getAck(void);
-    inline void sendByte(uchar ucDta);
+    inline uchar sendByte(uchar ucDta);
     inline uchar sendByteAck(uchar ucDta);                                 // send byte and get ack
 
   public:
