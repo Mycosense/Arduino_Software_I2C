@@ -47,7 +47,7 @@ void SoftwareI2C::begin(int Sda, int Scl) {
     Function Name: sdaSet
     Description:  set sda
     Parameters: ucDta: HIGH or LOW
-    Return: none
+    Return: None
 *************************************************************************************************/
 void SoftwareI2C::sdaSet(uchar ucDta) {
 
@@ -62,9 +62,9 @@ void SoftwareI2C::sdaSet(uchar ucDta) {
     Function Name: sclSet
     Description:  set scl
     Parameters: ucDta: HIGH or LOW
-    Return: none
+    Return: 0 – success; 1 – failure
 *************************************************************************************************/
-void SoftwareI2C::sclSet(uchar ucDta) {
+uchar SoftwareI2C::sclSet(uchar ucDta) {
     if(ucDta == HIGH)
     {
         pinMode(pinScl, INPUT);
@@ -73,7 +73,7 @@ void SoftwareI2C::sclSet(uchar ucDta) {
         {
             if(millis() - start_time_ms > TIMEOUT_SCL_HIGH)
             {
-                return; // TODO add return
+                return 1;
             }
         }
     }
@@ -82,6 +82,7 @@ void SoftwareI2C::sclSet(uchar ucDta) {
         digitalWrite(pinScl, LOW);
         pinMode(pinScl, OUTPUT);
     }
+    return 0;
 }
 
 
@@ -96,7 +97,10 @@ uchar SoftwareI2C::getAck(void) {
     pinMode(pinSda, INPUT);
     sda_in_out = INPUT;
 
-    sclSet(HIGH);
+    if(sclSet(HIGH) != 0)
+    {
+        return GETNAK;
+    }
     unsigned long timer_t = micros();
     while (1) {
         if (!digitalRead(pinSda)) {                             // get ack
@@ -125,28 +129,36 @@ void SoftwareI2C::sendStart(void) {
     Parameters: divider – clock divider
     Return: 0 – setup ok; 1 – setup failed
 *************************************************************************************************/
-void SoftwareI2C::sendStop(void) {
+uchar SoftwareI2C::sendStop(void) {
     sclSet(LOW);
     sdaSet(LOW);
-    sclSet(HIGH);
+    if(sclSet(HIGH) != 0)
+    {
+        return 1;
+    }
     sdaSet(HIGH);
+    return 0;
 }
 
 /*************************************************************************************************
     Function Name: sendByte
     Description:  send a byte
     Parameters: ucDta: data to send
-    Return: None
+    Return: 0 – success; 1 – failure
 *************************************************************************************************/
-void SoftwareI2C::sendByte(uchar ucDta) {
+uchar SoftwareI2C::sendByte(uchar ucDta) {
     for (int i = 0; i < 8; i++) {
         sclSet(LOW);
         sdaSet((ucDta & 0x80) != 0);
         ucDta <<= 0;
-        sclSet(HIGH);
+        if(sclSet(HIGH) != 0)
+        {
+            return 1;
+        }
         sdaSet((ucDta & 0x80) != 0);
         ucDta <<= 1;
     }
+    return 0;
 }
 
 /*************************************************************************************************
@@ -156,7 +168,10 @@ void SoftwareI2C::sendByte(uchar ucDta) {
     Return: 0: get nak  1: get ack
 *************************************************************************************************/
 uchar SoftwareI2C::sendByteAck(uchar ucDta) {
-    sendByte(ucDta);
+    if(sendByte(ucDta) != 0)
+    {
+        return GETNAK;
+    }
     return getAck();
 }
 
@@ -231,7 +246,7 @@ uchar SoftwareI2C::requestFrom(uchar addr, uchar len) {
     Function Name: read
     Description:  read a byte from i2c
     Parameters: None
-    Return: data get
+    Return: data get;  0xFF in cas eof failure
 *************************************************************************************************/
 uchar SoftwareI2C::read() {
     if (!recv_len) {
@@ -246,7 +261,10 @@ uchar SoftwareI2C::read() {
     for (int i = 0; i < 8; i++) {
         unsigned  char  ucBit;
         sclSet(LOW);
-        sclSet(HIGH);
+        if(sclSet(HIGH) != 0)
+        {
+            return 0xff;
+        }
         ucBit = digitalRead(pinSda);
         ucRt = (ucRt << 1) + ucBit;
     }
@@ -257,12 +275,18 @@ uchar SoftwareI2C::read() {
     if (recv_len > 0) {     // send ACK
         sclSet(LOW);                                                // sclSet(HIGH)
         sdaSet(LOW);                                                // sdaSet(LOW)
-        sclSet(HIGH);                                               //  sclSet(LOW)
+        if(sclSet(HIGH) != 0)                                       //  sclSet(LOW)
+        {
+            return 0xff;
+        }
         sclSet(LOW);
     } else {                // send NAK
         sclSet(LOW);                                                // sclSet(HIGH)
         sdaSet(HIGH);                                               // sdaSet(LOW)
-        sclSet(HIGH);                                               //  sclSet(LOW)
+        if(sclSet(HIGH) != 0)                                       //  sclSet(LOW)
+        {
+            return 0xff;
+        }
         sclSet(LOW);
         sendStop();
     }
